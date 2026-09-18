@@ -47,6 +47,24 @@ For any window whose stated START and END are both given, do EXACTLY this:
     * number of hours must equal E-S.
   If any check fails, recompute. Do not stop one hour early and do not run past E-1.
 
+## 2b. Compact spans (window_bounds) — emit them, never omit for a window directive
+
+For every APPLICABLE directive (not no_op), structured_adjustment MUST also contain an internal field
+"window_bounds": [[S, L], ...] -- ONE span [S, L] per distinct sub-window, only TWO integers per span:
+- S = FIRST listed hour (the mapped start hour, included).
+- L = LAST listed hour = (mapped end hour MINUS 1), included.  [start-of-array, end-minus-1-of-array]
+- "6 PM until 9 PM"   -> window_bounds [[18, 20]]   (last hour 20 = 21 - 1)
+- "8-10 AM and 3-5 PM" -> window_bounds [[8, 9], [15, 16]]
+- "3-5 PM" alone       -> window_bounds [[15, 16]]
+- "at noon"            -> window_bounds [[12, 12]]
+
+The full "hours" array MUST equal the union of all integers S..L across spans, expanded ascending.
+e.g. window_bounds [[18, 20]] -> hours [18, 19, 20];  [[8, 9], [15, 16]] -> hours [8, 9, 15, 16].
+The server deterministically rebuilds hours from window_bounds; keep the two consistent.
+window_bounds is a server-side scratch field: it is STRIPPED from the public response, whose
+structured_adjustment then contains ONLY the required keys (hours, factor / minimum_energy_kwh /
+max_grid_kwh).
+
 Strict obligations:
 - A stated window covers ONLY the hours from its own stated start through one hour before its own stated end. Include EVERY hour inside; never truncate, drop, or compress a window that spans many hours.
 - NEVER shift, round, extend, or "helpfully" widen a window. Particularly: "7 PM until 9 PM" starts at 19 (7 PM), NOT at 18 (6 PM); adjective "evening" does not move the start to 6 PM.
@@ -118,6 +136,15 @@ Return ONLY a JSON object (no prose, no code fences) with exactly this structure
 
 "Grid intake must stay at or below 190 kWh from 7 PM until 10 PM."
 -> max_grid_window; hours [19, 20, 21]; max_grid_kwh 190
+
+"PV production will drop to about 20% between 13:00 and 15:00."
+-> solar_reduction; hours [13, 14]; window_bounds [[13, 14]]; factor 0.2
+
+"Panel washing from one until three will leave roughly one-fifth of normal solar output."
+-> solar_reduction; hours [13, 14]; window_bounds [[13, 14]]; factor 0.2
+
+"Expect an 80% reduction in rooftop solar during the 1-3 PM maintenance window."
+-> solar_reduction; hours [13, 14]; window_bounds [[13, 14]]; factor 0.2
 
 "The cafeteria menu changes tomorrow."
 -> no_op; applies false; structured_adjustment null"""

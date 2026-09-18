@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass, field
 
 
@@ -38,6 +39,33 @@ def _validate_hours(hours_raw: list, capacity: float) -> list[int] | None:
     return hours
 
 
+def _hours_from_window_bounds(bounds_raw) -> list[int] | None:
+    """Deterministically rebuild hours from compact [S, L] spans.
+
+    Each span has TWO integers: S = first listed hour, L = last listed hour
+    (the excluded END clock-hour minus 1). hours = every integer S..L
+    inclusive. "6 PM until 9 PM" -> [18, 20] -> hours [18, 19, 20].
+    """
+    if not isinstance(bounds_raw, list) or len(bounds_raw) == 0:
+        return None
+    hours: set[int] = set()
+    for span in bounds_raw:
+        if not isinstance(span, (list, tuple)) or len(span) != 2:
+            return None
+        start, last = span
+        if not isinstance(start, (int, float)) or not isinstance(last, (int, float)):
+            return None
+        int_start, int_last = int(start), int(last)
+        if int_start != start or int_last != last:
+            return None
+        if not (0 <= int_start <= int_last <= 23):
+            return None
+        hours.update(range(int_start, int_last + 1))
+    if not hours:
+        return None
+    return sorted(hours)
+
+
 def validate_directives(
     raw_directives: list[dict],
     num_notes: int,
@@ -67,14 +95,20 @@ def validate_directives(
             validated[note_index] = ValidatedDirective(directive_type="no_op")
             continue
 
-        hours = _validate_hours(adjustment.get("hours") if isinstance(adjustment, dict) else None, battery_capacity)
+        if not isinstance(adjustment, dict):
+            validated[note_index] = ValidatedDirective(directive_type="no_op")
+            continue
+
+        hours = _hours_from_window_bounds(adjustment.get("window_bounds"))
+        if hours is None:
+            hours = _validate_hours(adjustment.get("hours"), battery_capacity)
         if hours is None:
             validated[note_index] = ValidatedDirective(directive_type="no_op")
             continue
 
         if directive_type == "solar_reduction":
             factor = adjustment.get("factor")
-            if not isinstance(factor, (int, float)) or factor < 0 or factor > 1:
+            if not isinstance(factor, (int, float)) or not math.isfinite(factor) or factor < 0 or factor > 1:
                 validated[note_index] = ValidatedDirective(directive_type="no_op")
                 continue
             validated[note_index] = ValidatedDirective(
@@ -85,7 +119,7 @@ def validate_directives(
 
         elif directive_type == "minimum_battery_reserve":
             min_energy = adjustment.get("minimum_energy_kwh")
-            if not isinstance(min_energy, (int, float)) or min_energy < 0 or min_energy > battery_capacity:
+            if not isinstance(min_energy, (int, float)) or not math.isfinite(min_energy) or min_energy < 0 or min_energy > battery_capacity:
                 validated[note_index] = ValidatedDirective(directive_type="no_op")
                 continue
             validated[note_index] = ValidatedDirective(
@@ -108,7 +142,7 @@ def validate_directives(
 
         elif directive_type == "max_grid_window":
             max_grid = adjustment.get("max_grid_kwh")
-            if not isinstance(max_grid, (int, float)) or max_grid < 0 or max_grid != max_grid:
+            if not isinstance(max_grid, (int, float)) or not math.isfinite(max_grid) or max_grid < 0:
                 validated[note_index] = ValidatedDirective(directive_type="no_op")
                 continue
             validated[note_index] = ValidatedDirective(
