@@ -46,15 +46,12 @@ docker compose up --build
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | Yes | — | OpenAI/OpenAI-compatible API key |
-| `OPENAI_BASE_URL` | No | `https://router.bynara.id/v1` | Base URL for the model router/provider |
-| `OPENAI_MODEL` | No | `agnes-2.5-flash` | Model for operator-note interpretation |
+| `OPENAI_BASE_URL` | Yes | — | Base URL for the model router/provider |
+| `OPENAI_MODEL` | Yes | — | Model for operator-note interpretation |
 
 ## Testing
 
 ```bash
-# Unit tests
-pytest tests/
-
 # Validate against public sample pack (requires running server)
 python -m tools.run_samples.py
 ```

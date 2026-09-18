@@ -14,7 +14,7 @@ def _get_client() -> OpenAI:
     global _client
     if _client is None:
         _client = OpenAI(
-            base_url=os.environ.get("OPENAI_BASE_URL", "https://router.bynara.id/v1"),
+            base_url=os.environ["OPENAI_BASE_URL"],
             api_key=os.environ["OPENAI_API_KEY"],
         )
     return _client
@@ -29,7 +29,7 @@ def interpret_notes(
 
     Returns (validated_interpretation_entries, raw_directives_for_optimizer).
     """
-    model = os.environ.get("OPENAI_MODEL", "agnes-2.5-flash")
+    model = os.environ["OPENAI_MODEL"]
     user_prompt = build_user_prompt(operator_notes, hours, battery)
 
     try:
