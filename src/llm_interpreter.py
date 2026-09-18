@@ -16,6 +16,8 @@ def _get_client() -> OpenAI:
         _client = OpenAI(
             base_url=os.environ["OPENAI_BASE_URL"],
             api_key=os.environ["OPENAI_API_KEY"],
+            timeout=24.0,
+            max_retries=1,
         )
     return _client
 
@@ -40,6 +42,7 @@ def interpret_notes(
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0,
+            max_tokens=1024,
             response_format={"type": "json_object"},
         )
         raw_text = response.choices[0].message.content or ""

@@ -16,6 +16,16 @@ class BatteryInput(BaseModel):
     max_charge_kwh_per_hour: float = Field(..., ge=0)
     max_discharge_kwh_per_hour: float = Field(..., ge=0)
 
+    @model_validator(mode="after")
+    def _check_battery_bounds(self):
+        if self.minimum_energy_kwh > self.capacity_kwh:
+            raise ValueError("minimum_energy_kwh must not exceed capacity_kwh")
+        if self.initial_energy_kwh > self.capacity_kwh:
+            raise ValueError("initial_energy_kwh must not exceed capacity_kwh")
+        if self.initial_energy_kwh < self.minimum_energy_kwh:
+            raise ValueError("initial_energy_kwh must be at least minimum_energy_kwh")
+        return self
+
 
 class OptimizeRequest(BaseModel):
     scenario_id: str

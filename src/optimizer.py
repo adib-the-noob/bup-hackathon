@@ -159,24 +159,28 @@ def solve(
     )
 
     if not result.success:
-        raise RuntimeError(f"Optimization failed: {result.message}")
+        raise RuntimeError("Optimization failed: the given scenario and directives are infeasible.")
 
     x = result.x
-    g = x[:n]
-    s = x[n : 2 * n]
-    c_arr = x[2 * n : 3 * n]
-    d_arr = x[3 * n : 4 * n]
+    g = np.where(np.abs(x[:n]) < 1e-9, 0.0, x[:n])
+    s = np.where(np.abs(x[n : 2 * n]) < 1e-9, 0.0, x[n : 2 * n])
+    c_arr = np.where(np.abs(x[2 * n : 3 * n]) < 1e-9, 0.0, x[2 * n : 3 * n])
+    d_arr = np.where(np.abs(x[3 * n : 4 * n]) < 1e-9, 0.0, x[3 * n : 4 * n])
+
+    # Net charge/discharge per hour so a single hour never reports an
+    # internally inconsistent pair of actions.
+    net = c_arr - d_arr
 
     plan = []
     e_prev = battery.initial_energy_kwh
     for h in range(n):
-        e_after = e_prev + c_arr[h] - d_arr[h]
-        if c_arr[h] > 1e-6:
+        e_after = e_prev + net[h]
+        if net[h] > 1e-6:
             action = "charge"
-            b_kwh = c_arr[h]
-        elif d_arr[h] > 1e-6:
+            b_kwh = net[h]
+        elif net[h] < -1e-6:
             action = "discharge"
-            b_kwh = d_arr[h]
+            b_kwh = -net[h]
         else:
             action = "idle"
             b_kwh = 0.0

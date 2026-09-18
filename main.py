@@ -1,8 +1,10 @@
+import math
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from src.llm_interpreter import interpret_notes
 from src.models import HealthResponse, OptimizeRequest, OptimizeResponse
@@ -11,6 +13,29 @@ from src.optimizer import solve
 load_dotenv()
 
 app = FastAPI(title="GridWise LLM Energy Optimizer")
+
+
+def _sanitize(obj):
+    """Replace NaN/Inf floats and non-serializable objects so validation errors serialize cleanly."""
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize(v) for v in obj]
+    if isinstance(obj, (str, int, bool)) or obj is None:
+        return obj
+    return str(obj)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_handler(request: Request, exc: RequestValidationError):
+    content = _sanitize(exc.errors())
+    is_malformed_json = any(
+        err.get("type") in {"json_invalid", "json_decode"} for err in exc.errors()
+    )
+    status = 400 if is_malformed_json else 422
+    return JSONResponse(status_code=status, content={"detail": content})
 
 
 @app.get("/")
