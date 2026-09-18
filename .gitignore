@@ -17,3 +17,7 @@ wheels/
 
 problem_statement/*
 problem_statement
+
+# Generated FDE hidden-case scenario packs
+tests/
+tools/run_samples.py
