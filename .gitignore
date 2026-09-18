@@ -11,5 +11,8 @@ wheels/
 .commandcode/*
 .commandcode
 
+.env
+
+
 problem_statement/*
 problem_statement
