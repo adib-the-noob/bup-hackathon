@@ -45,8 +45,9 @@ docker compose up --build
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | Yes | — | OpenAI API key |
-| `OPENAI_MODEL` | No | `gpt-4o-mini` | Model for operator-note interpretation |
+| `OPENAI_API_KEY` | Yes | — | OpenAI/OpenAI-compatible API key |
+| `OPENAI_BASE_URL` | No | `https://router.bynara.id/v1` | Base URL for the model router/provider |
+| `OPENAI_MODEL` | No | `agnes-2.5-flash` | Model for operator-note interpretation |
 
 ## Testing
 

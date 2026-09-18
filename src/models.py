@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Literal
 
 
@@ -22,6 +22,15 @@ class OptimizeRequest(BaseModel):
     operator_notes: list[str] = Field(..., min_length=1, max_length=3)
     hours: list[HourInput] = Field(..., min_length=24, max_length=24)
     battery: BatteryInput
+
+    @model_validator(mode="after")
+    def _check_hours_and_notes(self):
+        if any(not note.strip() for note in self.operator_notes):
+            raise ValueError("operator_notes must be non-empty strings")
+        hour_ids = [h.hour for h in self.hours]
+        if sorted(hour_ids) != list(range(24)):
+            raise ValueError("hours must contain exactly one entry per hour 0..23")
+        return self
 
 
 class DirectiveInterpretation(BaseModel):

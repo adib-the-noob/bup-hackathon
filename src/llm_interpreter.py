@@ -29,7 +29,7 @@ def interpret_notes(
 
     Returns (validated_interpretation_entries, raw_directives_for_optimizer).
     """
-    model = "agnes-2.5-flash"
+    model = os.environ.get("OPENAI_MODEL", "agnes-2.5-flash")
     user_prompt = build_user_prompt(operator_notes, hours, battery)
 
     try:
